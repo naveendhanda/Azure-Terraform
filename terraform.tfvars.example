@@ -1,0 +1,13 @@
+# Example terraform.tfvars file
+# Copy this file to terraform.tfvars and modify the values as needed
+
+resource_group_name = "rg-traffic-manager-demo"
+location           = "East US"
+region1            = "East US"
+region2            = "West US"
+
+traffic_manager_name     = "tm-appgw-demo"
+traffic_manager_dns_name = "tm-appgw-demo"
+
+# Traffic routing methods: Performance, Weighted, Priority, Geographic, MultiValue, Subnet
+traffic_routing_method = "Performance"
