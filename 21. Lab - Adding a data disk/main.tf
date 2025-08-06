@@ -25,15 +25,16 @@ resource "azurerm_subnet" "appsubnet01" {
 }
 
 resource "azurerm_network_interface" "webinterface01" {
-  name                = "webinterface01"
-  location            = local.resource_location
-  resource_group_name = azurerm_resource_group.appgrp.name
+  name                 = "webinterface01"
+  location             = local.resource_location
+  resource_group_name  = azurerm_resource_group.appgrp.name
+  accelerated_networking_enabled = true  # Enables SR-IOV for better network performance
 
   ip_configuration {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.websubnet01.id
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id = azurerm_public_ip.webip01.id
+    public_ip_address_id          = azurerm_public_ip.webip01.id
   }
 }
 
@@ -86,7 +87,8 @@ resource "azurerm_windows_virtual_machine" "webvm01" {
 
   os_disk {
     caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
+    storage_account_type = "Premium_LRS"
+    disk_size_gb         = 128
   }
 
   source_image_reference {
@@ -103,9 +105,11 @@ resource "azurerm_managed_disk" "datadisk01" {
   name                 = "datadisk01"
   location             = local.resource_location
   resource_group_name  = azurerm_resource_group.appgrp.name
-  storage_account_type = "Standard_LRS"
+  storage_account_type = "Premium_LRS"
   create_option        = "Empty"
-  disk_size_gb         = "4"
+  disk_size_gb         = "32"
+  disk_iops_read_write = 500
+  disk_mbps_read_write = 60
 
 }
 
@@ -113,7 +117,7 @@ resource "azurerm_managed_disk" "datadisk01" {
 
 resource "azurerm_virtual_machine_data_disk_attachment" "datadisk01_webvm01" {
   managed_disk_id    = azurerm_managed_disk.datadisk01.id
-  virtual_machine_id = azurerm_virtual_machine.webvm01.id
+  virtual_machine_id = azurerm_windows_virtual_machine.webvm01.id
   lun                = "0"
-  caching            = "ReadWrite"
+  caching            = "ReadOnly"
 }

@@ -11,7 +11,7 @@ variable "admin_username" {
 variable "vm_size" {
   type = string
   description = "This is the size of the machine"
-  default = "Standard_B2s"
+  default = "Standard_D2s_v5"  # Better performance than B-series for production workloads
 }
 
 variable "admin_password" {

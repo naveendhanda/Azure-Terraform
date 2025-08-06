@@ -1,6 +1,16 @@
 resource "azurerm_resource_group" "appgrp" {
   name     = "app-grp"
   location = local.resource_location
+  
+  tags = {
+    Environment = "Development"
+    Project     = "Terraform-Labs"
+    CreatedBy   = "Terraform"
+  }
+  
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "azurerm_virtual_network" "app_network" {
@@ -25,15 +35,16 @@ resource "azurerm_subnet" "appsubnet01" {
 }
 
 resource "azurerm_network_interface" "webinterface01" {
-  name                = "webinterface01"
-  location            = local.resource_location
-  resource_group_name = azurerm_resource_group.appgrp.name
+  name                 = "webinterface01"
+  location             = local.resource_location
+  resource_group_name  = azurerm_resource_group.appgrp.name
+  accelerated_networking_enabled = true  # Enables SR-IOV for better network performance
 
   ip_configuration {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.websubnet01.id
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id = azurerm_public_ip.webip01.id
+    public_ip_address_id          = azurerm_public_ip.webip01.id
   }
 }
 
@@ -78,17 +89,20 @@ resource "azurerm_windows_virtual_machine" "webvm01" {
   name                = "webvm01"
   resource_group_name = azurerm_resource_group.appgrp.name
   location            = local.resource_location
-  size                = "Standard_B2s"
+  size                = "Standard_D2s_v5"  # Better performance-to-cost ratio than B2s
   admin_username      = "appadmin"
   admin_password      = "Azure@123"
   vm_agent_platform_updates_enabled = true
+  patch_assessment_mode = "AutomaticByPlatform"
+  patch_mode           = "AutomaticByPlatform"
   network_interface_ids = [
     azurerm_network_interface.webinterface01.id,
   ]
 
   os_disk {
     caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
+    storage_account_type = "Premium_LRS"
+    disk_size_gb         = 128
   }
 
   source_image_reference {
@@ -96,5 +110,17 @@ resource "azurerm_windows_virtual_machine" "webvm01" {
     offer     = "WindowsServer"
     sku       = "2022-Datacenter"
     version   = "latest"
+  }
+  
+  # Ensure network interface is created first
+  depends_on = [
+    azurerm_network_interface.webinterface01,
+    azurerm_subnet_network_security_group_association.websubnet01_appnsg
+  ]
+  
+  tags = {
+    Environment = "Development"
+    Project     = "Terraform-Labs"
+    CreatedBy   = "Terraform"
   }
 }
