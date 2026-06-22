@@ -1,0 +1,64 @@
+name: Terraform Infra Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment (Dev, Test, Stage, Prod)'
+        required: true
+        type: choice
+        options:
+          - Dev
+          - Test
+          - Stage
+          - Prod
+      location:
+        description: 'Azure location (CentralUS or EastUS2)'
+        required: true
+        type: choice
+        options:
+          - CentralUS
+          - EastUS2
+      apply:
+        description: 'Run terraform apply? (true/false)'
+        required: false
+        default: 'false'
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: release
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.6
+
+      - name: Terraform Init
+        run: terraform init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+      - name: Terraform Plan
+        run: terraform plan -var="environment=${{ github.event.inputs.environment }}" -var="location=${{ github.event.inputs.location }}"
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+      - name: Terraform Apply
+        if: ${{ github.event.inputs.apply == 'true' }}
+        run: terraform apply -auto-approve -var="environment=${{ github.event.inputs.environment }}" -var="location=${{ github.event.inputs.location }}"
+        env:
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
